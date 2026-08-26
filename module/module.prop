@@ -1,0 +1,7 @@
+id=OnePlus15-165HZ-LTPO
+name=OnePlus 15 165Hz + LTPO
+version=v1.6
+versionCode=10600
+author=barsikus007 & 天伞桜, mrFrok
+description=165 Гц при взаимодействии, стоковый ADFR-режим (до 1 Гц) в простое. Патч refresh_rate_config.xml генерируется на устройстве, привязки к версии прошивки нет.
+updateJson=https://raw.githubusercontent.com/mrFrok/OnePlus15-165HZ-LTPO/main/update.json

@@ -1,0 +1,13 @@
+<?xml version='1.0' encoding='utf-8' standalone='yes' ?>
+<!-- sample for rule tests: same format as the firmware file, contents are made up -->
+<refresh_rate_config version="20260601">
+  <cameraOverride package="com.example.messenger" />
+  <config defaultRateId="1-1-2-3" disableViewOverrideDefault="false" maxrefreshsettings="3" extremeHighEnable="true" />
+  <item package="com.example.browser" rateId="1-1-2-3" />
+  <item package="com.example.video" rateId="2-2-2-2" /> <!-- locked to 60 -->
+  <item package="com.example.game" rateId="4-1-2-4" />
+  <item package="com.example.social" rateId="7-1-2-7" />
+  <item package="com.example.tight" rateId="3-1-2-3" disableViewOverride="true" enableWinOverride="false"/>
+  <item package="com.example.ninety" rateId="1-1-2-1" />
+  <extremeHighRate package="com.example.social" rateId="7" />
+</refresh_rate_config>

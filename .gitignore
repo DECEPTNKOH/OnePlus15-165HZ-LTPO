@@ -1,0 +1,6 @@
+patched/
+*.zip
+.mounted
+.vrrd.pid
+vrrd.log
+camera_pkgs.auto
