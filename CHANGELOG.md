@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.6.1
+
+* Everything the user can see is in English now: module description, action
+  button output, `diag.sh`, log lines and the comments in `vrr.conf`.
+  Russian is kept in `README.ru.md` only.
+* The action button report counted lines instead of tags for the 165 Hz entries.
+
 ## v1.6
 
 * The camera app list moved to `/data/adb/vrr_camera_pkgs`, so it now survives

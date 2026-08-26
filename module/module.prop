@@ -1,7 +1,7 @@
 id=OnePlus15-165HZ-LTPO
 name=OnePlus 15 165Hz + LTPO
-version=v1.6
-versionCode=10600
+version=v1.6.1
+versionCode=10601
 author=barsikus007 & 天伞桜, mrFrok
-description=165 Гц при взаимодействии, стоковый ADFR-режим (до 1 Гц) в простое. Патч refresh_rate_config.xml генерируется на устройстве, привязки к версии прошивки нет.
+description=Runs the panel at 165 Hz while you interact and lets the stock ADFR mode take it down to 1 Hz when idle. The refresh_rate_config.xml patch is generated on the device, so nothing is tied to a firmware version.
 updateJson=https://raw.githubusercontent.com/mrFrok/OnePlus15-165HZ-LTPO/main/update.json

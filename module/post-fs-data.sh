@@ -1,9 +1,9 @@
 #!/system/bin/sh
-# OnePlus15-165HZ-LTPO — генерация и подмена refresh_rate_config.xml.
+# OnePlus15-165HZ-LTPO — builds and bind-mounts a patched refresh_rate_config.xml.
 #
-# Патч делается на устройстве из живого файла, поэтому модуль не привязан
-# к конкретной версии прошивки. Если файл не найден, не похож на
-# refresh_rate_config или патч не дал изменений — ничего не монтируется.
+# The patch is generated on the device from the live file, so the module is not
+# tied to a firmware version. If the file is missing, does not look like a
+# refresh_rate_config, or the patch produces nothing, nothing gets mounted.
 
 MODDIR=${0%/*}
 LOG="$MODDIR/vrrd.log"
@@ -17,36 +17,36 @@ rm -f "$STATE"
 FORCE_ALL=1
 [ -f "$MODDIR/vrr.conf" ] && . "$MODDIR/vrr.conf"
 
-# --- ищем исходный конфиг ------------------------------------------------
+# --- locate the stock config ---------------------------------------------
 SRC=""
 for p in /my_product/etc /my_stock/etc /product/etc /system/etc /vendor/etc; do
   if [ -f "$p/refresh_rate_config.xml" ]; then SRC="$p/refresh_rate_config.xml"; break; fi
 done
 if [ -z "$SRC" ]; then
-  log "refresh_rate_config.xml не найден — выходим"
+  log "refresh_rate_config.xml not found — nothing to do"
   exit 0
 fi
-log "исходник: $SRC"
+log "source: $SRC"
 
-# --- проверяем, что это действительно тот формат -------------------------
+# --- make sure it really is that format ----------------------------------
 if ! grep -q "<refresh_rate_config" "$SRC"; then
-  log "ОТМЕНА: в $SRC нет тега <refresh_rate_config"
+  log "ABORT: no <refresh_rate_config tag in $SRC"
   exit 0
 fi
 SRC_ITEMS=$(grep -cE 'rateId="[0-9]-[0-9]-[0-9]-[0-9]"' "$SRC")
 if [ "${SRC_ITEMS:-0}" -lt 10 ]; then
-  log "ОТМЕНА: формат rateId не распознан (найдено $SRC_ITEMS записей)"
+  log "ABORT: rateId format not recognised (found $SRC_ITEMS entries)"
   exit 0
 fi
 
-# уже наш файл? (значит скрипт запустили повторно поверх живого mount)
+# already our file? (the script was run again on top of a live mount)
 if grep -q 'version="20991231"' "$SRC"; then
-  log "ОТМЕНА: по пути $SRC уже лежит наш пропатченный файл, повторно не патчим"
+  log "ABORT: $SRC already holds our patched file, not patching twice"
   echo "$SRC" > "$STATE"
   exit 0
 fi
 
-# --- генерируем ----------------------------------------------------------
+# --- generate ------------------------------------------------------------
 PATCH_DIR="$MODDIR/patched"
 DST="$PATCH_DIR/refresh_rate_config.xml"
 mkdir -p "$PATCH_DIR"
@@ -57,37 +57,37 @@ if [ "$FORCE_ALL" = "1" ]; then
 else
   RULES="$MODDIR/sed/respect.sed"
 fi
-log "правила: $RULES (FORCE_ALL=$FORCE_ALL)"
+log "rules: $RULES (FORCE_ALL=$FORCE_ALL)"
 
 if ! sed -E -f "$RULES" "$SRC" > "$DST" 2>>"$LOG"; then
-  log "ОТМЕНА: sed завершился с ошибкой"
+  log "ABORT: sed failed"
   rm -f "$DST"
   exit 0
 fi
 
-# --- запретить ронять частоту запросом окна -------------------------------
-# WIN_OVERRIDE=all — всем записям (побочка: приложение не сможет попросить свою частоту)
+# --- stop apps from pulling the rate down through the window request ------
+# WIN_OVERRIDE=all — every entry (side effect: no app can request its own rate)
 if [ "$WIN_OVERRIDE" = "all" ]; then
   sed -i -E -e '/<item/ s/ enableWinOverride="[a-z]+"//' \
             -e '/<item/ s|(<item [^>]*)/>|\1 enableWinOverride="false" />|' "$DST"
-  log "оконный оверрайд запрещён всем: записей $(grep -o 'enableWinOverride=\"false\"' "$DST" | wc -l)"
+  log "window override disabled for every entry: $(grep -o 'enableWinOverride=\"false\"' "$DST" | wc -l) tags"
 fi
 
-# --- камера: снять оба зажима у камерных приложений -----------------------
-# Зажимов два и они независимы:
-#   1) getSpecialLowRefreshRateId() при открытой камере отдаёт rateId 2 (60 Гц)
-#      — лечится тегом <cameraOverride package="X"/>;
-#   2) ревизия по запросу окна (в логе "revised to win request") — лечится
-#      атрибутом enableWinOverride="false" у записи приложения.
-# Плюс highLightCameraRate: без него на высокой яркости камера уходит в 90 Гц.
+# --- camera: lift both caps for camera apps ------------------------------
+# There are two independent caps:
+#   1) with a camera open, getSpecialLowRefreshRateId() returns rateId 2 (60 Hz)
+#      — lifted by a <cameraOverride package="X"/> tag;
+#   2) the window-request revision ("revised to win request" in the log)
+#      — lifted by enableWinOverride="false" on the app's entry.
+# Plus highLightCameraRate: without it the camera drops to 90 Hz at high brightness.
 if [ "$CAMERA_165" = "1" ]; then
-  # список: ручной + встроенный на случай первой загрузки + собранный на устройстве
+  # list: manual + built-in fallback for the very first boot + collected on device
   CAM="$CAMERA_PKGS"
   [ -f "$MODDIR/camera_pkgs.default" ] && CAM="$CAM $(cat "$MODDIR/camera_pkgs.default")"
-  # собранный на устройстве список лежит вне модуля — переживает обновление модуля
+  # the collected list lives outside the module so it survives a module update
   [ -f "${CAMERA_LIST:-/data/adb/vrr_camera_pkgs}" ] && CAM="$CAM $(cat "${CAMERA_LIST:-/data/adb/vrr_camera_pkgs}")"
   [ -f "$MODDIR/camera_pkgs.auto" ] && CAM="$CAM $(cat "$MODDIR/camera_pkgs.auto")"
-  # без дубликатов: ручной список и автоматический пересекаются
+  # drop duplicates: the manual and collected lists overlap
   CAM=$(for x in $CAM; do echo "$x"; done | sort -u)
 
   DEF=$(grep -m1 -oE 'defaultRateId="[0-9-]+"' "$DST" | sed -e 's/.*="//' -e 's/"//')
@@ -119,52 +119,52 @@ if [ "$CAMERA_165" = "1" ]; then
   rm -f "$SEDF"
 
   sed -i -E -e 's| highLightCameraRate="[0-9]+"||' -e 's|<config |<config highLightCameraRate="7" |' "$DST"
-  log "камера: cameraOverride +$n_over, флаг проставлен $n_item, новых записей $n_new"
+  log "camera: cameraOverride +$n_over, flag set on $n_item, new entries $n_new"
 fi
 
-# --- проверяем результат -------------------------------------------------
+# --- validate the result -------------------------------------------------
 SRC_LINES=$(wc -l < "$SRC")
 DST_LINES=$(wc -l < "$DST")
 if [ "$SRC_LINES" != "$DST_LINES" ]; then
-  log "ОТМЕНА: число строк не совпало ($SRC_LINES -> $DST_LINES)"
+  log "ABORT: line count changed ($SRC_LINES -> $DST_LINES)"
   rm -f "$DST"
   exit 0
 fi
 
 CHANGED=$(grep -cE ' rateId="[0-9]-[0-9]-[0-9]-7"' "$DST")
 if [ "${CHANGED:-0}" -lt 1 ]; then
-  log "ОТМЕНА: патч не дал ни одной записи 165 Гц"
+  log "ABORT: the patch produced no 165 Hz entries"
   rm -f "$DST"
   exit 0
 fi
 
 if ! grep -qE '<config [^>]*defaultRateId="[0-9]-[0-9]-[0-9]-[0-9]"' "$DST"; then
-  log "ОТМЕНА: строка <config> с defaultRateId испорчена или не найдена"
+  log "ABORT: the <config> line with defaultRateId is damaged or missing"
   rm -f "$DST"
   exit 0
 fi
 
-# --- права и SELinux -----------------------------------------------------
+# --- ownership and SELinux -----------------------------------------------
 chown 0:0 "$DST"
 chmod 0644 "$DST"
 CTX=$(ls -Zd "$SRC" 2>/dev/null | sed -E 's/^([^ ]+).*/\1/')
 case "$CTX" in
-  u:object_r:*) chcon "$CTX" "$DST" 2>>"$LOG" || log "chcon $CTX не сработал" ;;
-  *)            chcon u:object_r:system_file:s0 "$DST" 2>>"$LOG" || log "chcon по умолчанию не сработал" ;;
+  u:object_r:*) chcon "$CTX" "$DST" 2>>"$LOG" || log "chcon $CTX failed" ;;
+  *)            chcon u:object_r:system_file:s0 "$DST" 2>>"$LOG" || log "default chcon failed" ;;
 esac
 
-# --- монтируем -----------------------------------------------------------
+# --- mount ---------------------------------------------------------------
 if mount -o bind "$DST" "$SRC" 2>>"$LOG" || mount --bind "$DST" "$SRC" 2>>"$LOG"; then
-  log "подменён $SRC (записей 165 Гц: $CHANGED из $SRC_ITEMS)"
+  log "mounted over $SRC (165 Hz entries: $CHANGED of $SRC_ITEMS)"
   echo "$SRC" > "$STATE"
 else
-  log "ОШИБКА: mount --bind не удался"
+  log "ERROR: bind mount failed"
   exit 0
 fi
 
-# --- предупреждение про RUS-копию в /data --------------------------------
+# --- warn about a RUS copy in /data --------------------------------------
 if [ -f /data/system/refresh_rate_config.xml ]; then
-  log "внимание: есть /data/system/refresh_rate_config.xml (RUS). Версия в нашем файле поднята до 20991231, система должна выбрать наш."
+  log "note: /data/system/refresh_rate_config.xml exists (RUS update). Our file claims version 20991231, so the system should prefer ours."
 fi
 
 exit 0

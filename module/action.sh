@@ -1,18 +1,18 @@
 #!/system/bin/sh
-# Кнопка «Действие» в менеджере KernelSU.
-# Пересобирает патч из текущего файла прошивки — нужно после OTA,
-# после правки vrr.conf или после установки новых приложений с камерой.
+# The action button in the KernelSU manager.
+# Rebuilds the patch from the current firmware file — useful after an OTA,
+# after editing vrr.conf, or after installing new camera apps.
 MODDIR=${0%/*}
 
-echo "OnePlus15-165HZ-LTPO — пересборка патча"
+echo "OnePlus15-165HZ-LTPO — rebuilding the patch"
 echo
 
-# 1. свежий список камерных приложений
+# 1. refresh the camera app list
 if [ -f "$MODDIR/scan_camera_pkgs.sh" ]; then
   echo "· $(sh "$MODDIR/scan_camera_pkgs.sh" 2>&1 | tail -1)"
 fi
 
-# 2. снимаем подмену, чтобы под ней открылся исходный файл прошивки
+# 2. unmount, so the stock firmware file is exposed underneath
 SRC=$(cat "$MODDIR/.mounted" 2>/dev/null)
 [ -z "$SRC" ] && SRC=/my_product/etc/refresh_rate_config.xml
 i=0
@@ -21,25 +21,25 @@ while grep -q 'version="20991231"' "$SRC" 2>/dev/null && [ $i -lt 5 ]; do
   i=$((i + 1))
 done
 if grep -q 'version="20991231"' "$SRC" 2>/dev/null; then
-  echo "· не удалось снять подмену с $SRC — нужна перезагрузка"
+  echo "· could not unmount $SRC — a reboot is required"
   exit 1
 fi
-echo "· подмена снята, под ней исходник прошивки"
+echo "· unmounted, the stock firmware file is exposed"
 
-# 3. пересобираем и монтируем заново
+# 3. rebuild and mount again
 sh "$MODDIR/post-fs-data.sh"
 
 echo
 if [ -f "$MODDIR/.mounted" ]; then
-  echo "Готово. Что получилось:"
+  echo "Done. Result:"
   D="$MODDIR/patched/refresh_rate_config.xml"
-  echo "  записей 165 Гц:      $(grep -c ' rateId="[0-9]-[0-9]-[0-9]-7"' "$D" 2>/dev/null)"
-  echo "  cameraOverride:      $(grep -o '<cameraOverride' "$D" 2>/dev/null | wc -l)"
+  echo "  165 Hz entries:      $(grep -o ' rateId="[0-9]-[0-9]-[0-9]-7"' "$D" 2>/dev/null | wc -l)"
+  echo "  cameraOverride tags: $(grep -o '<cameraOverride' "$D" 2>/dev/null | wc -l)"
   echo "  enableWinOverride:   $(grep -o 'enableWinOverride="false"' "$D" 2>/dev/null | wc -l)"
   echo
-  echo "Файл подменён, но система читает его только при старте —"
-  echo "чтобы изменения вступили в силу, перезагрузитесь."
+  echo "The file is mounted, but the system only reads it at boot —"
+  echo "reboot for the changes to take effect."
 else
-  echo "Патч НЕ применён. Причина в логе:"
+  echo "The patch was NOT applied. Reason from the log:"
   tail -4 "$MODDIR/vrrd.log" 2>/dev/null
 fi

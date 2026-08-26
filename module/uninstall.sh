@@ -1,7 +1,7 @@
 #!/system/bin/sh
-# Вернуть настройку частоты в нормальное значение при удалении модуля.
-# Без этого система могла бы остаться в режиме 1 (после удаления модуля
-# это стоковые 90 Гц), потому что демон переключил её перед удалением.
+# Restore the refresh rate setting when the module is removed.
+# Without this the system could be left at value 1, which without our patched
+# config means the stock 90 Hz mode, because the daemon set it before removal.
 
 MODDIR=${0%/*}
 PID=$(cat "$MODDIR/.vrrd.pid" 2>/dev/null)

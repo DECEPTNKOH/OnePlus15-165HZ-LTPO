@@ -1,12 +1,12 @@
 #!/system/bin/sh
-# OnePlus15-165HZ-LTPO — демон переключения частоты.
+# OnePlus15-165HZ-LTPO — refresh rate switching daemon.
 #
-# Пока пользователь касается экрана — режим ACTIVE_MODE (после патча конфига
-# это 165 Гц). Через IDLE_TIMEOUT секунд без касаний — IDLE_MODE (стоковый
-# ADFR-режим панели на 120 Гц, который умеет опускаться до 1 Гц).
+# While the user touches the screen the setting is ACTIVE_MODE (165 Hz once the
+# config is patched). After IDLE_TIMEOUT seconds without a touch it becomes
+# IDLE_MODE — the stock ADFR-capable 120 Hz mode, which can drop to 1 Hz.
 #
-# Ждём события блокирующим getevent, поэтому в простое демон не просыпается
-# вообще: ни таймеров, ни поллинга.
+# Input events are awaited with a blocking getevent, so while idle the daemon
+# never wakes up: no timers, no polling.
 
 MODDIR=${0%/*}
 LOG="$MODDIR/vrrd.log"
@@ -23,11 +23,11 @@ DEBUG=0
 log() { [ "$DEBUG" = "1" ] && echo "[$(date '+%m-%d %H:%M:%S')] vrrd: $*" >> "$LOG"; return 0; }
 say() { echo "[$(date '+%m-%d %H:%M:%S')] vrrd: $*" >> "$LOG"; }
 
-# --- одна копия ----------------------------------------------------------
+# --- single instance -----------------------------------------------------
 if [ -f "$PIDFILE" ]; then
   OLD=$(cat "$PIDFILE" 2>/dev/null)
   if [ -n "$OLD" ] && [ -d "/proc/$OLD" ]; then
-    say "уже запущен (pid $OLD), выходим"
+    say "already running (pid $OLD), exiting"
     exit 0
   fi
 fi
@@ -43,13 +43,13 @@ get_mode() {
   cmd settings get secure "$KEY" 2>/dev/null || settings get secure "$KEY" 2>/dev/null
 }
 
-# Приложение на экране просило остаться на высокой частоте?
-# Результат кэшируется на KEEP_RECHECK секунд, чтобы не звать dumpsys в цикле.
+# Does the foreground app ask to stay at the high rate?
+# The answer is cached for KEEP_RECHECK seconds so dumpsys is not called in a loop.
 KEEP_RECHECK=30
 KEEP_UNTIL=0
 keep_active_pkg() {
   KEEP="$KEEP_ACTIVE_PKGS"
-  # в видоискателе по экрану не возят, а простой уронил бы потолок до 120
+  # nobody swipes in a viewfinder, and the idle state would cap the panel at 120
   if [ "$KEEP_ACTIVE_CAMERA" = "1" ] && [ -f "${CAMERA_LIST:-/data/adb/vrr_camera_pkgs}" ]; then
     KEEP="$KEEP $(cat "${CAMERA_LIST:-/data/adb/vrr_camera_pkgs}")"
   fi
@@ -61,7 +61,7 @@ keep_active_pkg() {
   for p in $KEEP; do
     if [ "$p" = "$cur" ]; then
       KEEP_UNTIL=$((now + KEEP_RECHECK))
-      log "остаёмся активными: на экране $cur"
+      log "staying active: $cur is in the foreground"
       return 0
     fi
   done
@@ -84,16 +84,16 @@ set_state() {
 CHILD=""
 cleanup() {
   [ -n "$CHILD" ] && kill "$CHILD" 2>/dev/null
-  say "останов, возвращаем $ACTIVE_MODE"
+  say "stopping, restoring $ACTIVE_MODE"
   put_mode "$ACTIVE_MODE"
   rm -f "$PIDFILE"
   exit 0
 }
 trap cleanup TERM INT HUP
 
-# Ждём событие ввода. $1 — таймаут в секундах, пусто — ждать бесконечно.
-# Запускаем фоном и ждём через wait, иначе сигнал (kill) не обработается,
-# пока getevent висит в блокирующем чтении.
+# Wait for an input event. $1 is a timeout in seconds, empty means wait forever.
+# Run it in the background and wait, otherwise a signal (kill) would not be
+# handled while getevent sits in a blocking read.
 wait_event() {
   if [ -n "$1" ]; then
     timeout "$1" getevent -c 1 "$DEV" >/dev/null 2>&1 &
@@ -107,7 +107,7 @@ wait_event() {
   return $rc
 }
 
-# --- ищем тачскрин -------------------------------------------------------
+# --- find the touchscreen ------------------------------------------------
 find_touch() {
   for d in /dev/input/event*; do
     [ -e "$d" ] || continue
@@ -121,31 +121,31 @@ find_touch() {
 
 DEV=$(find_touch)
 if [ -z "$DEV" ]; then
-  say "тачскрин не найден, демон не запущен"
+  say "touchscreen not found, daemon not started"
   rm -f "$PIDFILE"
   exit 1
 fi
-say "устройство ввода: $DEV, простой через ${IDLE_TIMEOUT}с, ACTIVE=$ACTIVE_MODE IDLE=$IDLE_MODE"
+say "input device: $DEV, idle after ${IDLE_TIMEOUT}s, ACTIVE=$ACTIVE_MODE IDLE=$IDLE_MODE"
 
 set_state active
 
-# --- основной цикл -------------------------------------------------------
+# --- main loop -----------------------------------------------------------
 while :; do
-  # выключение на лету: флаг Magisk/KSU или собственный
+  # runtime kill switch: the Magisk/KSU flag or our own
   if [ -f "$MODDIR/disable" ] || [ -f "$MODDIR/stop" ]; then
-    say "найден флаг остановки"
+    say "stop flag found"
     cleanup
   fi
 
   if [ ! -e "$DEV" ]; then
-    say "устройство $DEV пропало, ищем заново"
+    say "$DEV disappeared, looking for it again"
     sleep 2
     NEW=$(find_touch)
-    if [ -n "$NEW" ]; then DEV="$NEW"; say "новое устройство: $DEV"; else continue; fi
+    if [ -n "$NEW" ]; then DEV="$NEW"; say "new device: $DEV"; else continue; fi
   fi
 
   if [ "$state" = "idle" ]; then
-    # блокируемся до первого касания — ни одного пробуждения в простое
+    # block until the first touch — zero wakeups while idle
     if wait_event ""; then
       set_state active
       sleep "$DEBOUNCE"

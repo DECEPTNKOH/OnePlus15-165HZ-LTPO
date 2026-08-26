@@ -1,6 +1,6 @@
 #!/system/bin/sh
-# Собирает список приложений, запрашивающих разрешение на камеру.
-# Результат кладётся в camera_pkgs.auto и используется при следующей сборке патча.
+# Collects the packages that request the camera permission.
+# The result is stored outside the module and used the next time the patch is built.
 MODDIR=${0%/*}
 OUT="${CAMERA_LIST:-/data/adb/vrr_camera_pkgs}"
 TMP="$MODDIR/.camscan.tmp"
@@ -21,8 +21,8 @@ done < "$TMP"
 
 if [ -s "$TMP.list" ]; then
   sort -u "$TMP.list" > "$OUT"
-  echo "камерных приложений найдено: $(wc -l < "$OUT")"
+  echo "camera apps found: $(wc -l < "$OUT")"
 else
-  echo "список пуст, старый файл не трогаем"
+  echo "empty result, keeping the previous list"
 fi
 rm -f "$TMP" "$TMP.list"
