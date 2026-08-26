@@ -36,6 +36,6 @@ for rules in module/sed/force.sed module/sed/respect.sed; do
   rm -f "$out" "$out2"
 done
 
-for f in module/*.sh; do sh -n "$f" || fail "синтаксис $f"; done
+for f in module/*.sh; do sh -n "$f" || fail "syntax error in $f"; done
 echo "ok: shell syntax"
 echo "All checks passed."
