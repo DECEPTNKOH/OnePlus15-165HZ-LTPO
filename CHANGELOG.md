@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.7
+
+* `KEEP_ACTIVE_CAMERA` now checks whether a camera is **actually streaming**
+  (`dumpsys media.camera` → `Active Camera Clients`), instead of whether the
+  foreground app merely holds the camera permission. About 80 apps hold that
+  permission — browsers, maps, messengers, banking apps — so the previous check
+  kept the panel at 165 Hz almost everywhere and the idle drop never happened.
+  Now the high rate is held only while a viewfinder is live.
+
 ## v1.6.1
 
 * Everything the user can see is in English now: module description, action

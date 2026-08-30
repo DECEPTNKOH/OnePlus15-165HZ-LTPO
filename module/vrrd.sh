@@ -46,13 +46,27 @@ get_mode() {
 # Does the foreground app ask to stay at the high rate?
 # The answer is cached for KEEP_RECHECK seconds so dumpsys is not called in a loop.
 KEEP_RECHECK=30
+CAM_RECHECK=10
 KEEP_UNTIL=0
+# Is a camera actually streaming right now? Not "does the app hold the camera
+# permission" — 80 apps do, including browsers, maps and messengers, and keeping
+# the panel awake in all of them would kill the idle drop everywhere.
+# `dumpsys media.camera` lists live clients; the list is "[]" when nothing streams.
+CAM_UNTIL=0
+camera_in_use() {
+  [ "$KEEP_ACTIVE_CAMERA" = "1" ] || return 1
+  now=$(date +%s)
+  [ "$now" -lt "$CAM_UNTIL" ] && return 0
+  if dumpsys media.camera 2>/dev/null | grep -A6 "Active Camera Clients:" | grep -q "Client Package Name:"; then
+    CAM_UNTIL=$((now + CAM_RECHECK))
+    log "staying active: a camera is streaming"
+    return 0
+  fi
+  return 1
+}
+
 keep_active_pkg() {
   KEEP="$KEEP_ACTIVE_PKGS"
-  # nobody swipes in a viewfinder, and the idle state would cap the panel at 120
-  if [ "$KEEP_ACTIVE_CAMERA" = "1" ] && [ -f "${CAMERA_LIST:-/data/adb/vrr_camera_pkgs}" ]; then
-    KEEP="$KEEP $(cat "${CAMERA_LIST:-/data/adb/vrr_camera_pkgs}")"
-  fi
   [ -z "$KEEP" ] && return 1
   now=$(date +%s)
   [ "$now" -lt "$KEEP_UNTIL" ] && return 0
@@ -71,7 +85,7 @@ keep_active_pkg() {
 state=""
 set_state() {
   [ "$1" = "$state" ] && return 0
-  if [ "$1" = "idle" ] && keep_active_pkg; then
+  if [ "$1" = "idle" ] && { camera_in_use || keep_active_pkg; }; then
     return 0
   fi
   state="$1"
