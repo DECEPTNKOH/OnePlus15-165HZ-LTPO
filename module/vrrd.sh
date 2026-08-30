@@ -57,12 +57,22 @@ camera_in_use() {
   [ "$KEEP_ACTIVE_CAMERA" = "1" ] || return 1
   now=$(date +%s)
   [ "$now" -lt "$CAM_UNTIL" ] && return 0
-  if dumpsys media.camera 2>/dev/null | grep -A6 "Active Camera Clients:" | grep -q "Client Package Name:"; then
-    CAM_UNTIL=$((now + CAM_RECHECK))
-    log "staying active: a camera is streaming"
-    return 0
+  clients=$(dumpsys media.camera 2>/dev/null | grep -A6 "Active Camera Clients:" \
+            | grep -oE "Client Package Name: [A-Za-z0-9_.]+" | sed "s/.*: //")
+  [ -z "$clients" ] && return 1
+  CAM_UNTIL=$((now + CAM_RECHECK))
+  log "staying active: camera in use by $(echo $clients | tr '\n' ' ')"
+  # Remember who actually opens a camera. The patch needs enableWinOverride only
+  # for these, not for every app that merely holds the permission — that flag
+  # stops an app from requesting its own rate, and browsers or players need it.
+  # Picked up the next time the patch is built.
+  if [ "$LEARN_CAMERA_USERS" = "1" ]; then
+    used="${CAMERA_USED:-/data/adb/vrr_camera_used}"
+    for c in $clients; do
+      grep -qx "$c" "$used" 2>/dev/null || { echo "$c" >> "$used"; say "learned camera user: $c"; }
+    done
   fi
-  return 1
+  return 0
 }
 
 keep_active_pkg() {

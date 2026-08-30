@@ -1,7 +1,7 @@
 id=OnePlus15-165HZ-LTPO
 name=OnePlus 15 165Hz + LTPO
-version=v1.7
-versionCode=10700
+version=v1.8
+versionCode=10800
 author=barsikus007 & 天伞桜, mrFrok
 description=Runs the panel at 165 Hz while you interact and lets the stock ADFR mode take it down to 1 Hz when idle. The refresh_rate_config.xml patch is generated on the device, so nothing is tied to a firmware version.
 updateJson=https://raw.githubusercontent.com/mrFrok/OnePlus15-165HZ-LTPO/main/update.json

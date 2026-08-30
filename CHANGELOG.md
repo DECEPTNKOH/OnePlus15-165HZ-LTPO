@@ -1,5 +1,18 @@
 # Changelog
 
+## v1.8
+
+* The two camera fixes are no longer handed out together:
+  * `<cameraOverride>` goes to every app holding the camera permission — it is
+    free, the policy only consults it while the app actually holds a camera;
+  * `enableWinOverride="false"` goes only to packages the daemon has actually
+    seen streaming (`/data/adb/vrr_camera_used`) plus `CAMERA_PKGS`, because
+    that flag also stops an app from requesting its own refresh rate.
+  On a real config this shrinks the side effect from ~80 apps to the three that
+  actually use a camera.
+* `LEARN_CAMERA_USERS`: the daemon records the packages it sees streaming, so a
+  newly used camera app is fully covered from the next boot.
+
 ## v1.7
 
 * `KEEP_ACTIVE_CAMERA` now checks whether a camera is **actually streaming**

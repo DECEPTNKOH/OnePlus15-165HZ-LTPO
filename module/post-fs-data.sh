@@ -87,7 +87,9 @@ if [ "$CAMERA_165" = "1" ]; then
   # the collected list lives outside the module so it survives a module update
   [ -f "${CAMERA_LIST:-/data/adb/vrr_camera_pkgs}" ] && CAM="$CAM $(cat "${CAMERA_LIST:-/data/adb/vrr_camera_pkgs}")"
   [ -f "$MODDIR/camera_pkgs.auto" ] && CAM="$CAM $(cat "$MODDIR/camera_pkgs.auto")"
-  # drop duplicates: the manual and collected lists overlap
+  # packages actually seen using a camera, learned by the daemon
+  [ -f "${CAMERA_USED:-/data/adb/vrr_camera_used}" ] && CAM="$CAM $(cat "${CAMERA_USED:-/data/adb/vrr_camera_used}")"
+  # drop duplicates: the lists overlap
   CAM=$(for x in $CAM; do echo "$x"; done | sort -u)
 
   DEF=$(grep -m1 -oE 'defaultRateId="[0-9-]+"' "$DST" | sed -e 's/.*="//' -e 's/"//')
@@ -95,20 +97,35 @@ if [ "$CAMERA_165" = "1" ]; then
 
   SEDF="$PATCH_DIR/pkg.sed"
   : > "$SEDF"
+  # Who gets enableWinOverride="false": only packages actually seen using a
+  # camera, plus the manual list. The flag also blocks an app from requesting
+  # its own refresh rate, so handing it to every permission holder would take
+  # that away from browsers, players and maps for no reason.
+  WIN=""
+  [ -f "${CAMERA_USED:-/data/adb/vrr_camera_used}" ] && WIN="$(cat "${CAMERA_USED:-/data/adb/vrr_camera_used}")"
+  WIN="$WIN $CAMERA_PKGS"
+
   ins=""; n_over=0; n_item=0; n_new=0
   for p in $CAM; do
     [ -z "$p" ] && continue
     [ "$p" = "android" ] && continue
+
+    # cameraOverride is free: it only matters while the app holds a camera
     if ! grep -q "<cameraOverride package=\"$p\"" "$DST"; then
       ins="$ins<cameraOverride package=\"$p\" />"
       n_over=$((n_over + 1))
     fi
+
+    needs_flag=0
+    for w in $WIN; do [ "$w" = "$p" ] && needs_flag=1 && break; done
+    [ "$WIN_OVERRIDE" = "camera" ] || needs_flag=0
+
     if grep -q "<item package=\"$p\"" "$DST"; then
-      if [ "$WIN_OVERRIDE" = "camera" ]; then
+      if [ "$needs_flag" = "1" ]; then
         printf '/<item package="%s"/{\ns/ enableWinOverride="[a-z]*"//\ns|(<item [^>]*)/>|\\1 enableWinOverride="false" />|\n}\n' "$p" >> "$SEDF"
         n_item=$((n_item + 1))
       fi
-    else
+    elif [ "$needs_flag" = "1" ]; then
       ins="$ins<item package=\"$p\" rateId=\"$DEF\" enableWinOverride=\"false\" />"
       n_new=$((n_new + 1))
     fi
@@ -119,7 +136,7 @@ if [ "$CAMERA_165" = "1" ]; then
   rm -f "$SEDF"
 
   sed -i -E -e 's| highLightCameraRate="[0-9]+"||' -e 's|<config |<config highLightCameraRate="7" |' "$DST"
-  log "camera: cameraOverride +$n_over, flag set on $n_item, new entries $n_new"
+  log "camera: cameraOverride +$n_over (all permission holders), enableWinOverride on $n_item, new entries $n_new (actual camera users)"
 fi
 
 # --- validate the result -------------------------------------------------
