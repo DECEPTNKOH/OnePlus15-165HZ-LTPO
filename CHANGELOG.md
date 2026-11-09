@@ -1,5 +1,31 @@
 # Changelog
 
+## v1.9.0-preview.1 — DECEPTNKOH fork — 2026-11-10
+
+Experimental pre-release; iteration 1 complete, not a stable release.
+
+- Replace trust in stale PID files with a lifecycle flock; support Android mksh
+  by passing the lock through stdin. Never signal an unverified legacy PID.
+- Add persistent per-user baseline storage and checked restoration, including
+  deletion of an originally absent key, plus cooperative stop/uninstall.
+- Require SAX + DOM validation before XML mounting; fail closed on parser,
+  transformation, package-list or expected-insertion failures.
+- Add 65 unittest cases across the registered Python suites, alongside the
+  original sed/shell checks, a preview installer and allowlist packaging with
+  DEX integrity checks and payload SHA-256 manifests. Disable automatic updates.
+- Device validation on CPH2747 / CPH2747_17.0.0.102(EX01) / SukiSU: successful
+  boot, real XML bind mount, selected 165 Hz active and 60 Hz idle modes under
+  an idle policy capped at 120 Hz, restoration from setting 1 to 7 and restart.
+- Physical 1 Hz is not independently verified. Reference-driver min_fps and
+  test_te can expose software or substituted values. Long-term power use,
+  every app scenario and real manager-driven uninstall remain unverified.
+
+Tested ZIP runtime source: `87eb5e19122411066054316048b4dc03162b13bd`.
+ZIP SHA-256: `2255ebdf4c237d3f28846bf036e71ffbe61ccbe528e03d2087cb503d7e51be42`.
+Documentation commits after the runtime source do not rebuild the artifact.
+See [release notes](docs/releases/v1.9.0-preview.1.md) for update precautions.
+The earlier entries below are preserved upstream history, not new fork claims.
+
 ## v1.8
 
 * The two camera fixes are no longer handed out together:
