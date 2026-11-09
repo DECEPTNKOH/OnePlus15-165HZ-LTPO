@@ -15,7 +15,9 @@ vrr_acquire() {
     if [ -z "$VRR_BUSYBOX" ]; then say "ERROR: flock unavailable; refusing unlocked startup"; return 2; fi
   fi
   exec 9>>"$MODDIR/.vrrd.lock" || return 2
-  if ! vrr_flock -n 9; then
+  # Android mksh does not automatically export FD 9 to external commands.
+  # Duplicate it onto stdin; the shell keeps the same open file on FD 9.
+  if ! vrr_flock -n 0 <&9; then
     exec 9>&-
     say "daemon lock busy or unavailable; not starting"
     return 1
