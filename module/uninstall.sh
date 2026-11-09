@@ -1,13 +1,9 @@
 #!/system/bin/sh
-# Restore the refresh rate setting when the module is removed.
-# Without this the system could be left at value 1, which without our patched
-# config means the stock 90 Hz mode, because the daemon set it before removal.
+# Do not signal a PID from the legacy .vrrd.pid file: it may belong to an
+# unrelated process, including after a reboot. Removal requires a reboot;
+# until then an existing daemon may still change the setting.
+# A verified stop protocol will replace this conservative fallback.
 
-MODDIR=${0%/*}
-PID=$(cat "$MODDIR/.vrrd.pid" 2>/dev/null)
-[ -n "$PID" ] && kill "$PID" 2>/dev/null
-
-cmd settings put secure oplus_customize_screen_refresh_rate 7 2>/dev/null || \
-  settings put secure oplus_customize_screen_refresh_rate 7 2>/dev/null
+cmd settings put secure oplus_customize_screen_refresh_rate 7 2>/dev/null || settings put secure oplus_customize_screen_refresh_rate 7 2>/dev/null
 
 exit 0
