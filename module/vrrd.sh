@@ -18,9 +18,13 @@ say() { echo "[$(date '+%m-%d %H:%M:%S')] vrrd: $*" >> "$LOG"; }
 vrr_acquire
 rc=$?
 [ "$rc" = 0 ] || exit "$rc"
-# Legacy PID files are informational only. No process is signalled from them.
+[ -r "$MODDIR/settings-state.sh" ] || { say "ERROR: settings-state.sh missing"; exit 1; }
+. "$MODDIR/settings-state.sh"
+VRR_DIRTY=0
 put_mode() {
-  cmd settings put secure "$KEY" "$1" 2>/dev/null || settings put secure "$KEY" "$1" 2>/dev/null
+  # Even a failed command might have partially applied its write.
+  VRR_DIRTY=1
+  vrr_mode_write "$1"
 }
 KEEP_RECHECK=30
 CAM_RECHECK=10
@@ -77,18 +81,28 @@ set_state() {
   fi
 }
 CHILD=""
-cleanup() {
+finish() {
+  result=$?
+  trap - 0
   trap '' TERM INT HUP
   if [ -n "$CHILD" ]; then
     kill "$CHILD" 2>/dev/null
     wait "$CHILD" 2>/dev/null
     CHILD=""
   fi
-  # Exact pre-install restoration is a separate migration change.
-  say "stopping, selecting active mode $ACTIVE_MODE (not original setting)"
-  put_mode "$ACTIVE_MODE" || say "ERROR: final setting write failed"
-  exit 0
+  if [ "$VRR_DIRTY" = 1 ]; then
+    if vrr_baseline_restore; then
+      say "baseline restored for user $VRR_USER"
+    else
+      say "ERROR: baseline restore failed; snapshot retained at $VRR_BASELINE"
+      result=1
+    fi
+  fi
+  vrr_release
+  exit "$result"
 }
+cleanup() { exit 0; }
+trap finish 0
 trap cleanup TERM INT HUP
 wait_event() {
   # Do not let input helpers retain the lock after a daemon crash.
@@ -106,8 +120,12 @@ find_touch() {
   done
   return 1
 }
+# Do not start switching when a stop/removal was already requested.
+if [ -f "$MODDIR/disable" ] || [ -f "$MODDIR/stop" ] || [ -f "$MODDIR/remove" ]; then exit 0; fi
 DEV=$(find_touch)
 if [ -z "$DEV" ]; then say "touchscreen not found, daemon not started"; exit 1; fi
+vrr_baseline_prepare || { say "ERROR: baseline unavailable; refusing setting writes"; exit 1; }
+say "baseline user=$VRR_USER value=$VRR_VALUE; observed before first write, not necessarily before original install"
 say "input device: $DEV, idle after ${IDLE_TIMEOUT}s, ACTIVE=$ACTIVE_MODE IDLE=$IDLE_MODE"
 set_state active
 while :; do
@@ -131,7 +149,6 @@ while :; do
     fi
   else
     if wait_event "$IDLE_TIMEOUT"; then
-      # Retry active writes after failure; a failed idle write keeps state active.
       set_state active
       sleep "$DEBOUNCE"
     else
