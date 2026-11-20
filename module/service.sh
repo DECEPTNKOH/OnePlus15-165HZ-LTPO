@@ -8,6 +8,7 @@ say() { echo "[$(date '+%m-%d %H:%M:%S')] service: $*" >> "$LOG"; }
 
 DAEMON=1
 [ -f "$MODDIR/vrr.conf" ] && . "$MODDIR/vrr.conf"
+[ -f /data/adb/oneplus15-vrr-state/vrr.conf ] && . /data/adb/oneplus15-vrr-state/vrr.conf
 
 # wait for boot to complete
 i=0
@@ -30,7 +31,25 @@ else
 fi
 
 if [ "$DAEMON" != "1" ]; then
-  say "DAEMON=0 — switching disabled, the high rate stays pinned"
+  say "DAEMON=0 — switching disabled; pinning ACTIVE_MODE once"
+  ACTIVE_MODE=${ACTIVE_MODE:-7}
+  PIDFILE="$MODDIR/.vrrd.pid"
+  if [ -r "$MODDIR/lifecycle.sh" ] && [ -r "$MODDIR/settings-state.sh" ]; then
+    . "$MODDIR/lifecycle.sh"
+    if vrr_acquire; then
+      . "$MODDIR/settings-state.sh"
+      if VRR_SKIP_DIRTY_BASELINE=1 vrr_baseline_prepare && vrr_mode_write "$ACTIVE_MODE"; then
+        say "pinned $VRR_KEY=$ACTIVE_MODE (restored on uninstall)"
+      else
+        say "ERROR: could not pin ACTIVE_MODE"
+      fi
+      vrr_release
+    else
+      say "ERROR: lock busy; cannot pin ACTIVE_MODE"
+    fi
+  else
+    say "ERROR: lifecycle/settings-state helpers missing"
+  fi
   exit 0
 fi
 

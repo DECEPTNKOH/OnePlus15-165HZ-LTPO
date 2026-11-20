@@ -5,14 +5,20 @@ MODDIR=${0%/*}
 echo "=== module ==="
 [ -f "$MODDIR/.mounted" ] && echo "mounted over: $(cat "$MODDIR/.mounted")" || echo "config is NOT mounted"
 PID=$(cat "$MODDIR/.vrrd.pid" 2>/dev/null)
-if [ -n "$PID" ] && [ -d "/proc/$PID" ]; then echo "daemon: running (pid $PID)"; else echo "daemon: not running"; fi
+if [ -n "$PID" ] && [ -d "/proc/$PID" ] && grep -qa 'vrrd\.sh' "/proc/$PID/cmdline" 2>/dev/null; then
+  echo "daemon: running (pid $PID)"
+else
+  echo "daemon: not running"
+fi
 echo "setting: $(cmd settings get secure oplus_customize_screen_refresh_rate 2>/dev/null)"
 echo "peak_refresh_rate: $(cmd settings get system peak_refresh_rate 2>/dev/null)"
 
 echo
 echo "=== active config ==="
-grep -m1 -oE '<refresh_rate_config[^>]*>' /my_product/etc/refresh_rate_config.xml 2>/dev/null
-grep -m1 -oE '<config [^>]*>' /my_product/etc/refresh_rate_config.xml 2>/dev/null
+CFG=$(cat "$MODDIR/.mounted" 2>/dev/null)
+[ -n "$CFG" ] || CFG=/my_product/etc/refresh_rate_config.xml
+grep -m1 -oE '<refresh_rate_config[^>]*>' "$CFG" 2>/dev/null
+grep -m1 -oE '<config [^>]*>' "$CFG" 2>/dev/null
 
 echo
 echo "=== SurfaceFlinger ==="

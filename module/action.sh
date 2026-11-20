@@ -27,7 +27,7 @@ fi
 echo "· unmounted, the stock firmware file is exposed"
 
 # 3. rebuild and mount again
-sh "$MODDIR/post-fs-data.sh"
+VRR_KEEP_LOG=1 sh "$MODDIR/post-fs-data.sh"
 
 echo
 if [ -f "$MODDIR/.mounted" ]; then

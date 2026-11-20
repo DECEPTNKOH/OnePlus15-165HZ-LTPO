@@ -7,12 +7,13 @@ log() { echo "[$(date '+%m-%d %H:%M:%S')] post-fs-data: $*" >> "$LOG"; }
 abort() { log "ABORT: $*"; exit 1; }
 run() { "$@" 2>>"$LOG" || abort "command failed: $*"; }
 rm -f "$STATE"
-: > "$LOG"
+[ "${VRR_KEEP_LOG:-0}" = 1 ] || : > "$LOG"
 FORCE_ALL=1
 WIN_OVERRIDE=camera
 CAMERA_165=1
 CAMERA_PKGS=com.oplus.camera
 [ -f "$MODDIR/vrr.conf" ] && . "$MODDIR/vrr.conf"
+[ -f /data/adb/oneplus15-vrr-state/vrr.conf ] && . /data/adb/oneplus15-vrr-state/vrr.conf
 set -f
 case "$FORCE_ALL:$CAMERA_165:$WIN_OVERRIDE" in
   [01]:[01]:camera|[01]:[01]:all|[01]:[01]:off) ;;
@@ -37,7 +38,10 @@ if [ "$FORCE_ALL" = 1 ]; then RULES="$MODDIR/sed/force.sed"; else RULES="$MODDIR
 run sed -E -f "$RULES" "$S" > "$D"
 if [ "$WIN_OVERRIDE" = all ]; then
   run sed -i -E -e '/<item/ s/ enableWinOverride="[a-z]+"//' \
-    -e '/<item/ s|(<item [^>]*)/>|\1 enableWinOverride="false" />|' "$D"
+    -e '/<item/ s|(<item [^>]*)/>|\1 enableWinOverride="false" />|g' "$D"
+  n_items=$(grep -o '<item ' "$D" | wc -l | tr -d ' ')
+  n_flags=$(grep -o 'enableWinOverride="false"' "$D" | wc -l | tr -d ' ')
+  [ "$n_items" -gt 0 ] && [ "$n_items" = "$n_flags" ] || abort "win override coverage incomplete ($n_flags/$n_items)"
 fi
 # Package lists are data, not regular expressions or XML fragments.
 read_list() { sed 's/#.*$//' "$1"; }

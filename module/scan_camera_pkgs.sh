@@ -3,10 +3,11 @@
 # The result is stored outside the module and used the next time the patch is built.
 MODDIR=${0%/*}
 OUT="${CAMERA_LIST:-/data/adb/vrr_camera_pkgs}"
-TMP="$MODDIR/.camscan.tmp"
+TMP=$(mktemp "$MODDIR/.camscan.XXXXXX") || exit 1
+trap 'rm -f "$TMP" "$TMP.list"' 0
 mkdir -p "$(dirname "$OUT")" 2>/dev/null
 
-dumpsys package 2>/dev/null | grep -E "^  Package \[|android\.permission\.CAMERA" > "$TMP" || exit 1
+dumpsys package 2>/dev/null | grep -E "^  Package \[|android\.permission\.CAMERA([^A-Z_]|$)" > "$TMP" || exit 1
 
 pkg=""
 : > "$TMP.list"
