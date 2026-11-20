@@ -1,6 +1,6 @@
 id=OnePlus15-165HZ-LTPO
 name=OnePlus 15 165Hz + LTPO (DECEPTNKOH Preview)
-version=v1.9.0-preview.2
-versionCode=10902
+version=v1.9.0-preview.3
+versionCode=10903
 author=DECEPTNKOH (fork of barsikus007, 天伞桜, mrFrok)
 description=Experimental fork: guarded XML patching, daemon lifecycle fixes and setting baseline rollback. OnePlus 15 / ColorOS 17 device testing in progress. Reboot required after update.
