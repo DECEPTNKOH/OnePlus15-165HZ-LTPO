@@ -1,5 +1,15 @@
 # Changelog
 
+## [v1.9.0-preview.2] - 2026-11-20
+
+### Fixed
+- **KernelSU (`ksud`) installation checksums:** Excluded `META-INF/*` from `SHA256SUMS` because `ksud` does not extract `META-INF` into `$MODPATH` during module installation, fixing `Archive checksum verification failed`.
+- **Baseline snapshot & standalone sourcing (`settings-state.sh`):** Made dirty-baseline skipping opt-in (`VRR_SKIP_DIRTY_BASELINE=1` from `vrrd.sh`) and guarded `say` calls when sourced standalone, restoring full pass rate (`8/8`) in `tests/settings-state.py`.
+
+### Verified
+- Host checks (`sh tests/all.sh`) pass across syntax, `xmlguard`, `lifecycle`, `settings-state`, `patch-pipeline`, `restore-integration`, and `package` suites.
+- Packaged and verified `OnePlus15-165HZ-LTPO-v1.9.0-preview.2.zip` (`SHA-256: 88d869e1c658b8accf4453e053dcfd2608570c93102be374df09f67826995b6f`) from commit `65cff2c` on `main`.
+
 ## v1.9.0-preview.1 — DECEPTNKOH fork — 2026-11-10
 
 Experimental pre-release; iteration 1 complete, not a stable release.
