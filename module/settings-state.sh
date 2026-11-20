@@ -4,12 +4,21 @@ VRR_STATE_DIR=${VRR_STATE_DIR:-/data/adb/oneplus15-vrr-state}
 VRR_BASELINE="$VRR_STATE_DIR/baseline"
 VRR_KEY=oplus_customize_screen_refresh_rate
 VRR_READY=0
+
 vrr_number() { case "$1" in ""|*[!0-9]*) return 1 ;; esac; }
+vrr_norm_value() {
+  case "$1" in
+    ""|null) printf '%s\n' "null" ;;
+    *) printf '%s\n' "$1" ;;
+  esac
+}
 vrr_value_valid() { [ "$1" = null ] || vrr_number "$1"; }
+
 vrr_settings() {
   cmd settings --user "$VRR_USER" "$@" 2>/dev/null ||
     settings --user "$VRR_USER" "$@" 2>/dev/null
 }
+
 vrr_baseline_load() {
   VRR_READY=0
   [ ! -L "$VRR_STATE_DIR" ] && [ ! -L "$VRR_BASELINE" ] || return 1
@@ -22,8 +31,8 @@ vrr_baseline_load() {
   vrr_number "$VRR_USER" && vrr_value_valid "$VRR_VALUE" || return 1
   VRR_READY=1
 }
+
 vrr_baseline_prepare() {
-  # Existing snapshots survive restart and upgrade; never overwrite them.
   if [ -e "$VRR_BASELINE" ] || [ -L "$VRR_BASELINE" ]; then
     vrr_baseline_load
     return $?
@@ -33,8 +42,16 @@ vrr_baseline_prepare() {
   VRR_USER=$(cmd activity get-current-user 2>/dev/null) ||
     VRR_USER=$(am get-current-user 2>/dev/null) || return 1
   vrr_number "$VRR_USER" || return 1
-  VRR_VALUE=$(vrr_settings get secure "$VRR_KEY") || return 1
+  raw_val=$(vrr_settings get secure "$VRR_KEY") || return 1
+  VRR_VALUE=$(vrr_norm_value "$raw_val")
   vrr_value_valid "$VRR_VALUE" || return 1
+
+  if [ "$VRR_VALUE" = "${ACTIVE_MODE:-7}" ] || [ "$VRR_VALUE" = "${IDLE_MODE:-1}" ]; then
+    say "warning: observed $VRR_KEY=$VRR_VALUE matches daemon mode; skipping dirty baseline snapshot"
+    VRR_READY=1
+    return 0
+  fi
+
   (
     umask 077
     mkdir -p "$VRR_STATE_DIR" || exit 1
@@ -46,18 +63,21 @@ vrr_baseline_prepare() {
   ) || return 1
   vrr_baseline_load
 }
+
 vrr_mode_write() {
   [ "$VRR_READY" = 1 ] && vrr_number "$1" || return 1
   vrr_settings put secure "$VRR_KEY" "$1"
 }
+
 vrr_baseline_restore() {
-  # Re-read and validate the durable snapshot, including the original user ID.
+  [ -f "$VRR_BASELINE" ] || return 0
   vrr_baseline_load || return 1
   if [ "$VRR_VALUE" = null ]; then
-    vrr_settings delete secure "$VRR_KEY" >/dev/null || return 1
+    vrr_settings delete secure "$VRR_KEY" >/dev/null 2>&1 || true
   else
     vrr_settings put secure "$VRR_KEY" "$VRR_VALUE" || return 1
   fi
-  actual=$(vrr_settings get secure "$VRR_KEY") || return 1
+  raw_actual=$(vrr_settings get secure "$VRR_KEY") || return 1
+  actual=$(vrr_norm_value "$raw_actual")
   [ "$actual" = "$VRR_VALUE" ]
 }
