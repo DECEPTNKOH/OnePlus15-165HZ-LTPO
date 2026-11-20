@@ -1,8 +1,8 @@
-# OnePlus 15 165Hz + LTPO — DECEPTNKOH Preview (`v1.9.0-preview.2`)
+# OnePlus 15 165Hz + LTPO — DECEPTNKOH Preview (`v1.9.0-preview.3`)
 
 Experimental KernelSU / Magisk module fork for **OnePlus 15 (`CPH2747`, ColorOS 17)** that unlocks **165 Hz** refresh rate selection while preserving **LTPO idle downclocking**, guarded XML patching, safe daemon lifecycle control, and baseline setting restoration.
 
-> **Status:** Experimental preview (`v1.9.0-preview.2`, commit `65cff2c` on `main`). Automatic module updates (`updateJson`) remain disabled in preview builds.
+> **Status:** Experimental preview (`v1.9.0-preview.3`, commit `3b019e7` on `main`). Automatic module updates (`updateJson`) remain disabled in preview builds.
 
 ---
 
@@ -11,10 +11,10 @@ Experimental KernelSU / Magisk module fork for **OnePlus 15 (`CPH2747`, ColorOS 
 | Field | Value |
 | :--- | :--- |
 | **Module ID** | `OnePlus15-165HZ-LTPO` |
-| **Version / Code** | `v1.9.0-preview.2` (`10902`) |
-| **Source Commit** | `65cff2c` (`main`) |
-| **Release ZIP** | `OnePlus15-165HZ-LTPO-v1.9.0-preview.2.zip` |
-| **ZIP SHA-256** | `88d869e1c658b8accf4453e053dcfd2608570c93102be374df09f67826995b6f` |
+| **Version / Code** | `v1.9.0-preview.3` (`10903`) |
+| **Source Commit** | `3b019e7` (`main`) |
+| **Release ZIP** | `OnePlus15-165HZ-LTPO-v1.9.0-preview.3.zip` |
+| **ZIP SHA-256** | `28765f5fa424330bb26c392fcb4bd39f91f7db8c6beea5e0f5c8bdc796b09c1f` |
 | **Device & Root** | OnePlus 15 (`CPH2747`), ColorOS 17 (`CPH2747_17.0.0.102(EX01)`), KernelSU / SukiSU |
 
 ---
@@ -56,7 +56,7 @@ OnePlus15-165HZ-LTPO/
 
 ## Installation & Verification
 
-1. Download `OnePlus15-165HZ-LTPO-v1.9.0-preview.2.zip` from [GitHub Releases](https://github.com/DECEPTNKOH/OnePlus15-165HZ-LTPO/releases/tag/v1.9.0-preview.2).
+1. Download `OnePlus15-165HZ-LTPO-v1.9.0-preview.3.zip` from [GitHub Releases](https://github.com/DECEPTNKOH/OnePlus15-165HZ-LTPO/releases/tag/v1.9.0-preview.3).
 2. Flash in **KernelSU / SukiSU** (or via `ksud module install <path-to-zip>`) and **reboot**. Note that KernelSU removes `customize.sh` from `$MODPATH` after installation; all other payload files must match `SHA256SUMS`.
 3. Verify mount, daemon process, and display mode:
 
