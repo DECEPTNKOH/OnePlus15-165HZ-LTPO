@@ -125,4 +125,14 @@ exec "$REAL_SED" "$@"
         self.assertFalse((self.m/'.mounted').exists())
         self.assertEqual(self.events.read_text().splitlines(), ['GUARD','MOUNT','MOUNT'])
 
+    def test_win_override_all_covers_every_item(self):
+        self.config('WIN_OVERRIDE=all\n')
+        self.xml.write_text(SOURCE.replace(' />\n<item package="com.example.video"', '/><item package="com.example.video"'))
+        self.run_patch()
+        doc = ET.parse(self.m / 'patched/refresh_rate_config.xml').getroot()
+        items = doc.findall('item')
+        self.assertTrue(items)
+        for it in items:
+            self.assertEqual(it.attrib.get('enableWinOverride'), 'false')
+
 if __name__ == '__main__': unittest.main()

@@ -129,4 +129,13 @@ class RestoreIntegration(unittest.TestCase):
         self.assertEqual(self.stop(q), 0)
         self.assertEqual(self.data()['value'], '3')
 
+    def test_dirty_leftover_gets_null_baseline(self):
+        self.store.write_text(json.dumps({'value': '7'}))
+        (self.d / 'state').mkdir()
+        (self.d / 'state' / 'dirty').touch()
+        p = self.start(); self.idle(p)
+        self.assertEqual(self.stop(p), 0)
+        self.assertNotIn('value', self.data())
+        self.assertFalse((self.d / 'state' / 'dirty').exists())
+
 if __name__ == '__main__': unittest.main()

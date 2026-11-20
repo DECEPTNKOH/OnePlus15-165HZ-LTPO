@@ -89,4 +89,24 @@ class SettingsState(unittest.TestCase):
         self.run_shell('if vrr_mode_write 1; then exit 10; fi')
         self.assertNotIn('writes', self.read_store())
 
+    def test_dirty_marker_null_fallback(self):
+        self.set_store({'0': '7'})
+        (self.d / 'state').mkdir()
+        (self.d / 'state' / 'dirty').touch()
+        self.run_shell('VRR_SKIP_DIRTY_BASELINE=1 vrr_baseline_prepare && vrr_mode_write 1 && vrr_baseline_restore')
+        self.assertNotIn('0', self.read_store())
+        self.assertFalse((self.d / 'state' / 'dirty').exists())
+
+    def test_legit_value_without_marker_snapshotted(self):
+        self.set_store({'0': '1'})
+        self.run_shell('VRR_SKIP_DIRTY_BASELINE=1 vrr_baseline_prepare && vrr_mode_write 7 && vrr_baseline_restore')
+        self.assertEqual(self.read_store()['0'], '1')
+
+    def test_marker_created_and_removed(self):
+        self.set_store({'0': '3'})
+        self.run_shell('vrr_baseline_prepare && vrr_mode_write 1')
+        self.assertTrue((self.d / 'state' / 'dirty').exists())
+        self.run_shell('vrr_baseline_restore')
+        self.assertFalse((self.d / 'state' / 'dirty').exists())
+
 if __name__ == '__main__': unittest.main()
