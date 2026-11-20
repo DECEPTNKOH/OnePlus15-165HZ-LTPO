@@ -46,8 +46,8 @@ vrr_baseline_prepare() {
   VRR_VALUE=$(vrr_norm_value "$raw_val")
   vrr_value_valid "$VRR_VALUE" || return 1
 
-  if [ "$VRR_VALUE" = "${ACTIVE_MODE:-7}" ] || [ "$VRR_VALUE" = "${IDLE_MODE:-1}" ]; then
-    say "warning: observed $VRR_KEY=$VRR_VALUE matches daemon mode; skipping dirty baseline snapshot"
+  if [ "${VRR_SKIP_DIRTY_BASELINE:-0}" = "1" ] && { [ "$VRR_VALUE" = "${ACTIVE_MODE:-7}" ] || [ "$VRR_VALUE" = "${IDLE_MODE:-1}" ]; }; then
+    command -v say >/dev/null 2>&1 && say "warning: observed $VRR_KEY=$VRR_VALUE matches daemon mode; skipping dirty baseline snapshot"
     VRR_READY=1
     return 0
   fi

@@ -124,7 +124,7 @@ find_touch() {
 if [ -f "$MODDIR/disable" ] || [ -f "$MODDIR/stop" ] || [ -f "$MODDIR/remove" ]; then exit 0; fi
 DEV=$(find_touch)
 if [ -z "$DEV" ]; then say "touchscreen not found, daemon not started"; exit 1; fi
-vrr_baseline_prepare || { say "ERROR: baseline unavailable; refusing setting writes"; exit 1; }
+VRR_SKIP_DIRTY_BASELINE=1 vrr_baseline_prepare || { say "ERROR: baseline unavailable; refusing setting writes"; exit 1; }
 say "baseline user=$VRR_USER value=$VRR_VALUE; observed before first write, not necessarily before original install"
 say "input device: $DEV, idle after ${IDLE_TIMEOUT}s, ACTIVE=$ACTIVE_MODE IDLE=$IDLE_MODE"
 set_state active
