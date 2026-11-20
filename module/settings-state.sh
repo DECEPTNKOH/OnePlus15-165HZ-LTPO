@@ -46,10 +46,14 @@ vrr_baseline_prepare() {
   VRR_VALUE=$(vrr_norm_value "$raw_val")
   vrr_value_valid "$VRR_VALUE" || return 1
 
-  if [ "${VRR_SKIP_DIRTY_BASELINE:-0}" = "1" ] && { [ "$VRR_VALUE" = "${ACTIVE_MODE:-7}" ] || [ "$VRR_VALUE" = "${IDLE_MODE:-1}" ]; }; then
-    command -v say >/dev/null 2>&1 && say "warning: observed $VRR_KEY=$VRR_VALUE matches daemon mode; skipping dirty baseline snapshot"
-    VRR_READY=1
-    return 0
+  # Пропускаем снапшот только при наличии write-ahead dirty-маркера (реальный
+  # остаток демона). Совпавшее значение БЕЗ маркера — легитимный выбор пользователя
+  # (например стоковая "1") и снапшотится нормально. При маркере без снапшота
+  # fallback в null, чтобы uninstall сбросил ключ к системному дефолту.
+  if [ "${VRR_SKIP_DIRTY_BASELINE:-0}" = "1" ] && [ -f "$VRR_STATE_DIR/dirty" ] &&
+     { [ "$VRR_VALUE" = "${ACTIVE_MODE:-7}" ] || [ "$VRR_VALUE" = "${IDLE_MODE:-1}" ]; }; then
+    command -v say >/dev/null 2>&1 && say "warning: dirty marker present and $VRR_KEY=$VRR_VALUE matches daemon mode; baseline falls back to null (system default)"
+    VRR_VALUE=null
   fi
 
   (
@@ -64,8 +68,14 @@ vrr_baseline_prepare() {
   vrr_baseline_load
 }
 
+vrr_dirty_mark() {
+  ( umask 077; mkdir -p "$VRR_STATE_DIR" && chmod 0700 "$VRR_STATE_DIR" && : > "$VRR_STATE_DIR/dirty" )
+}
+
 vrr_mode_write() {
   [ "$VRR_READY" = 1 ] && vrr_number "$1" || return 1
+  # Write-ahead маркер: краш до restore обнаруживается на следующей загрузке.
+  vrr_dirty_mark || return 1
   vrr_settings put secure "$VRR_KEY" "$1"
 }
 
@@ -79,5 +89,6 @@ vrr_baseline_restore() {
   fi
   raw_actual=$(vrr_settings get secure "$VRR_KEY") || return 1
   actual=$(vrr_norm_value "$raw_actual")
-  [ "$actual" = "$VRR_VALUE" ]
+  [ "$actual" = "$VRR_VALUE" ] || return 1
+  rm -f "$VRR_STATE_DIR/dirty"
 }

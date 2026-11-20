@@ -11,12 +11,27 @@ IDLE_TIMEOUT=2
 DEBOUNCE=0.5
 DEBUG=0
 [ -f "$MODDIR/vrr.conf" ] && . "$MODDIR/vrr.conf"
+[ -f /data/adb/oneplus15-vrr-state/vrr.conf ] && . /data/adb/oneplus15-vrr-state/vrr.conf
 log() { [ "$DEBUG" = "1" ] && echo "[$(date '+%m-%d %H:%M:%S')] vrrd: $*" >> "$LOG"; return 0; }
 say() { echo "[$(date '+%m-%d %H:%M:%S')] vrrd: $*" >> "$LOG"; }
+log_trim() {
+  [ -f "$LOG" ] || return 0
+  vrr_sz=$(wc -c < "$LOG" 2>/dev/null) || return 0
+  [ "$vrr_sz" -gt 262144 ] || return 0
+  tail -c 131072 "$LOG" > "$LOG.trim" 2>/dev/null && mv -f "$LOG.trim" "$LOG"
+}
 [ -r "$MODDIR/lifecycle.sh" ] || { say "ERROR: lifecycle.sh missing"; exit 1; }
 . "$MODDIR/lifecycle.sh"
-vrr_acquire
-rc=$?
+rc=1
+vrr_tries=0
+while :; do
+  vrr_acquire
+  rc=$?
+  [ "$rc" != 1 ] && break
+  vrr_tries=$((vrr_tries + 1))
+  [ "$vrr_tries" -ge 10 ] && break
+  sleep 1
+done
 [ "$rc" = 0 ] || exit "$rc"
 [ -r "$MODDIR/settings-state.sh" ] || { say "ERROR: settings-state.sh missing"; exit 1; }
 . "$MODDIR/settings-state.sh"
@@ -34,7 +49,7 @@ camera_in_use() {
   [ "$KEEP_ACTIVE_CAMERA" = "1" ] || return 1
   now=$(date +%s)
   [ "$now" -lt "$CAM_UNTIL" ] && return 0
-  clients=$(dumpsys media.camera 2>/dev/null | grep -A6 "Active Camera Clients:" |
+  clients=$(dumpsys media.camera 2>/dev/null | grep -A40 "Active Camera Clients:" |
     grep -oE "Client Package Name: [A-Za-z0-9_.]+" | sed "s/.*: //")
   [ -z "$clients" ] && return 1
   CAM_UNTIL=$((now + CAM_RECHECK))
@@ -91,7 +106,9 @@ finish() {
     CHILD=""
   fi
   if [ "$VRR_DIRTY" = 1 ]; then
-    if vrr_baseline_restore; then
+    if [ ! -f "$VRR_BASELINE" ]; then
+      say "warning: no baseline snapshot; setting left at daemon value"
+    elif vrr_baseline_restore; then
       say "baseline restored for user $VRR_USER"
     else
       say "ERROR: baseline restore failed; snapshot retained at $VRR_BASELINE"
@@ -128,7 +145,10 @@ VRR_SKIP_DIRTY_BASELINE=1 vrr_baseline_prepare || { say "ERROR: baseline unavail
 say "baseline user=$VRR_USER value=$VRR_VALUE; observed before first write, not necessarily before original install"
 say "input device: $DEV, idle after ${IDLE_TIMEOUT}s, ACTIVE=$ACTIVE_MODE IDLE=$IDLE_MODE"
 set_state active
+vrr_loop=0
 while :; do
+  vrr_loop=$((vrr_loop + 1))
+  [ $((vrr_loop % 256)) -eq 0 ] && log_trim
   if [ -f "$MODDIR/disable" ] || [ -f "$MODDIR/stop" ] || [ -f "$MODDIR/remove" ]; then
     say "stop/remove flag found"
     cleanup
@@ -140,7 +160,14 @@ while :; do
     if [ -n "$NEW" ]; then DEV="$NEW"; else continue; fi
   fi
   if [ "$state" = idle ]; then
-    if wait_event 2; then
+    # Расслабляем только частоту опроса БЕЗ касаний при выключенной панели.
+    # Касания не задерживаются: getevent возвращается на первом же событии.
+    # Семантику power_status проверь на устройстве через diag.sh; нет файла — остаётся 2с.
+    vrr_poll=2
+    vrr_pwr=$(cat /sys/kernel/oplus_display/power_status 2>/dev/null)
+    vrr_pwr=${vrr_pwr##*:}
+    case "$vrr_pwr" in 0|"") ;; *) vrr_poll=10 ;; esac
+    if wait_event "$vrr_poll"; then
       set_state active
       sleep "$DEBOUNCE"
     else
