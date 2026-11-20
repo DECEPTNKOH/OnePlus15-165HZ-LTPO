@@ -1,67 +1,55 @@
-# OnePlus 15 — 165 Hz with working LTPO
+# OnePlus 15 refresh switching - DECEPTNKOH preview
 
-A Magisk/KernelSU module for the OnePlus 15 (`infinity`, CPH2747) on OxygenOS 16.
-It runs the panel at **165 Hz while you interact** and lets it fall back to the stock
-ADFR mode — down to **1 Hz** — when the screen is idle.
+Development iteration 1 is complete. The working result remains experimental
+v1.9.0-preview.1, not a stable release. No further kernel or TE experiments are
+part of this iteration. Work is retained on `fix/daemon-lifecycle`; this
+closeout does not merge or delete branches.
 
-Русская версия: [README.ru.md](README.ru.md)
+## Frozen tested artifact
 
-## Why not just pin 165 Hz
+- Runtime source commit: `87eb5e19122411066054316048b4dc03162b13bd`.
+- Module ID: `OnePlus15-165HZ-LTPO`; versionCode: `10901`.
+- ZIP: `OnePlus15-165HZ-LTPO-v1.9.0-preview.1.zip`.
+- ZIP SHA-256: `2255ebdf4c237d3f28846bf036e71ffbe61ccbe528e03d2087cb503d7e51be42`.
+- Device tested: CPH2747, build `CPH2747_17.0.0.102(EX01)`, SukiSU.
 
-The panel physically cannot do both. Proven from the firmware, not guessed:
+Later documentation-only commits do not replace or rebuild this artifact.
+The binary ZIP is built locally; this repository has not published a stable
+release or enabled automatic module updates. CI status is not attested by
+this report.
 
-* In `dtbo.img` the panel timings `sdc_fhd_144` and `sdc_fhd_165` carry **zero**
-  `qcom,mdss-dsi-adfr-min-fps-*` commands and no `oplus,adfr-min-fps-mapping-table`.
-  The 120/90/60 timings do — with the ladder `[120, 60, 30, 20, 10, 1]`.
-* The mode class shown by `dumpsys SurfaceFlinger` (`SA`/`SM`/`OA`) is the DT property
-  `qcom,mdss-dsi-h-sync-skew` (`oplus_adfr_h_skew` in the kernel):
-  0 = SDC_ADFR, 1 = SDC_MFR, 2 = OPLUS_ADFR.
-* At 165 Hz `min_fps` reads 55 — that is `mvt_render` (165/3) from `oplus_vrr_config.json`.
-  Writing 33, 15, 5 or 1 into it sticks but changes nothing: measured current stays
-  136–148 mA, while the 120→60 Hz idle state draws **78 mA**. The panel keeps scanning
-  at 165 regardless.
+## Verified and unverified behavior
 
-So the only way to get a low idle rate is to leave the 165 Hz mode when idle.
-That is what this module does.
+Verified on the test device: validated XML bind mount, correct daemon process,
+165 Hz selected display mode after interaction, 60 Hz selected mode in idle
+under a policy capped at 120 Hz, baseline restoration from setting 1 to 7,
+and cooperative stop/restart. Packaging completed the host test suites.
 
-## How it works
+Physical 1 Hz panel refresh is NOT independently verified. `min_fps` is a
+software parameter in the reference driver, and `test_te` can expose software
+markers, filtered results, timing fallbacks or copied minimum values. Neither
+node alone is proof of physical panel frequency. The published reference driver
+is not proven identical to the installed ColorOS 17 binary.
 
-1. **Patches `refresh_rate_config.xml`** so that the system refresh-rate setting becomes
-   a switch: value `7` selects 165 Hz, value `1` selects the stock ADFR-capable 120 Hz mode.
-   Every `rateId="a-b-c-d"` entry gets its 2nd slot set to `d` (144/165 lowered to 120)
-   and its 4th slot set to `7`.
-2. **Unlocks the boost paths** with `defaultMaxRate="165"`. Without that attribute its
-   default is 120 (`PRIORITY_PAD_MIRAGE_TBL`), and `adjustRefreshForDefaultMax()` clamps
-   app-switch animations, window overrides and floating windows down to 120.
-3. **Frees the camera viewfinders.** Two independent caps are lifted for every app that
-   holds `android.permission.CAMERA` — see [README.ru.md](README.ru.md) for the details.
-4. **`vrrd.sh`** blocks on the touchscreen input device and flips the setting:
-   touch → 165 Hz, `IDLE_TIMEOUT` seconds without touches → 120 Hz, after which the
-   stock OTI/ADFR machinery takes the panel down to 1 Hz on its own.
-   While idle the daemon does not wake at all — it sits in a blocking read, no polling.
+## Keep and avoid
 
-## Not tied to a firmware version
+Keep the installed module, its lifecycle lock and metadata, the persistent
+setting baseline, camera package lists, one verified ZIP, source snapshot and
+the original v1.8 backup. Do not blindly restore or run the old backup: its
+legacy PID-based shutdown/uninstall logic was unsafe.
 
-The patch is generated on the device from whatever `refresh_rate_config.xml` is there.
-No checksums, no version pins — after an OTA it simply rebuilds on the next boot.
-Before mounting it verifies the file looks right, that the line count is unchanged and
-that the patch actually produced 165 Hz entries. If anything fails, nothing is mounted
-and the reason goes to `vrrd.log`.
+Do not use Action or killall for hot rebuilding/restarting this preview. Do not
+write to test_te or adfr_config, clear software-marker bits, or flash a different
+kernel as part of cleanup. Debug logging may be disabled as a separate local
+configuration change using the tested cooperative stop/restart procedure.
 
-The KernelSU **action button** rebuilds the patch on demand and prints a report.
+See [Russian overview](README.ru.md), [iteration report](docs/iteration-1.md),
+[build instructions](docs/preview-build.md) and
+[baseline semantics](docs/settings-baseline.md). KernelSU removes customize.sh
+after installation; post-install checksum verification must account only for
+that consumed installer file, not ignore arbitrary missing runtime files.
 
-## Measured
+## Upstream
 
-| state | mode | `min_fps` | current |
-|---|---|---|---|
-| interacting | 165 Hz (`crtc/fps` 165.4) | 55 | 136 mA |
-| idle | 120 Hz, then 60 Hz | **1** | **78 mA** |
-
-Note: OPlus gates the idle drop on brightness (`hw_nit_limit: 30`), so on a dim screen
-`min_fps` stays high — that is stock behaviour, not this module.
-
-## Credits and licence
-
-Based on the idea and the original module by
-[barsikus007 & 天伞桜](https://github.com/barsikus007/OnePlus15-165HZ) (MIT).
-This rewrite is licensed under **GPL-3.0** — see [LICENSE](LICENSE).
+Fork of mrFrok/OnePlus15-165HZ-LTPO, with original work credited to
+barsikus007, 天伞桜 and mrFrok. Upstream history and LICENSE are retained.
