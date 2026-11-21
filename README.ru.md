@@ -1,8 +1,8 @@
-# OnePlus 15: переключение частоты — DECEPTNKOH Preview (`v1.9.0-preview.3`)
+# OnePlus 15: переключение частоты — DECEPTNKOH Preview (`v1.9.0-preview.4`)
 
 Экспериментальный форк модуля KernelSU / Magisk для **OnePlus 15 (`CPH2747`, ColorOS 17)**, открывающий режим **165 Гц** с сохранением **LTPO-сброса частоты в простое**, безопасным патчингом XML, корректным жизненным циклом демона и восстановлением исходной настройки частоты пользователя.
 
-> **Статус:** Экспериментальный пререлиз (`v1.9.0-preview.3`, коммит `3b019e7` в ветке `main`). Автообновление через `updateJson` в preview-сборках отключено.
+> **Статус:** Экспериментальный пререлиз (`v1.9.0-preview.4`, коммит `3b019e7` в ветке `main`). Автообновление через `updateJson` в preview-сборках отключено.
 
 ---
 
@@ -11,9 +11,9 @@
 | Параметр | Значение |
 | :--- | :--- |
 | **ID модуля** | `OnePlus15-165HZ-LTPO` |
-| **Версия / Код** | `v1.9.0-preview.3` (`10903`) |
+| **Версия / Код** | `v1.9.0-preview.4` (`10904`) |
 | **Коммит исходников** | `3b019e7` (`main`) |
-| **Архив релиза** | `OnePlus15-165HZ-LTPO-v1.9.0-preview.3.zip` |
+| **Архив релиза** | `OnePlus15-165HZ-LTPO-v1.9.0-preview.4.zip` |
 | **SHA-256 архива** | `28765f5fa424330bb26c392fcb4bd39f91f7db8c6beea5e0f5c8bdc796b09c1f` |
 | **Устройство и Root** | OnePlus 15 (`CPH2747`), ColorOS 17 (`CPH2747_17.0.0.102(EX01)`), KernelSU / SukiSU |
 
@@ -56,7 +56,7 @@ OnePlus15-165HZ-LTPO/
 
 ## Установка и проверка
 
-1. Скачай `OnePlus15-165HZ-LTPO-v1.9.0-preview.3.zip` со страницы [GitHub Releases](https://github.com/DECEPTNKOH/OnePlus15-165HZ-LTPO/releases/tag/v1.9.0-preview.3).
+1. Скачай `OnePlus15-165HZ-LTPO-v1.9.0-preview.4.zip` со страницы [GitHub Releases](https://github.com/DECEPTNKOH/OnePlus15-165HZ-LTPO/releases/tag/v1.9.0-preview.4).
 2. Установи архив через **KernelSU / SukiSU** (или командой `ksud module install <путь_к_zip>`) и **перезагрузи** устройство. KernelSU удаляет `customize.sh` после установки — его отсутствие после прошивки ожидаемо, остальные файлы должны совпадать с `SHA256SUMS`.
 3. Проверь монтирование, процесс демона и текущую частоту:
 
