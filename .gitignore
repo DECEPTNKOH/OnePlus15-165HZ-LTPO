@@ -4,3 +4,5 @@ patched/
 .vrrd.pid
 vrrd.log
 camera_pkgs.auto
+
+module/SHA256SUMS

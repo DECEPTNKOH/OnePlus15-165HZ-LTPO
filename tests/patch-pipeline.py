@@ -135,4 +135,9 @@ exec "$REAL_SED" "$@"
         for it in items:
             self.assertEqual(it.attrib.get('enableWinOverride'), 'false')
 
+    def test_force_all_single_line_rejected(self):
+        single = SOURCE.replace('\n', '')
+        self.xml.write_text(single)
+        self.run_patch(False)
+
 if __name__ == '__main__': unittest.main()

@@ -8,7 +8,14 @@ say() { echo "[$(date '+%m-%d %H:%M:%S')] service: $*" >> "$LOG"; }
 
 DAEMON=1
 [ -f "$MODDIR/vrr.conf" ] && . "$MODDIR/vrr.conf"
-[ -f /data/adb/oneplus15-vrr-state/vrr.conf ] && . /data/adb/oneplus15-vrr-state/vrr.conf
+OVRR_CONF=/data/adb/oneplus15-vrr-state/vrr.conf
+if [ -f "$OVRR_CONF" ]; then
+  if sh -n "$OVRR_CONF" 2>/dev/null; then
+    . "$OVRR_CONF"
+  else
+    echo "override config $OVRR_CONF has a syntax error; ignored" >> "$LOG"
+  fi
+fi
 
 # wait for boot to complete
 i=0

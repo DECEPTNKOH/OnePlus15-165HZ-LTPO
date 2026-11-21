@@ -5,13 +5,20 @@ MODDIR=${0%/*}
 LOG="$MODDIR/vrrd.log"
 PIDFILE="$MODDIR/.vrrd.pid"
 KEY=oplus_customize_screen_refresh_rate
-ACTIVE_MODE=7
-IDLE_MODE=1
+ACTIVE_MODE=3
+IDLE_MODE=0
 IDLE_TIMEOUT=2
 DEBOUNCE=0.5
 DEBUG=0
 [ -f "$MODDIR/vrr.conf" ] && . "$MODDIR/vrr.conf"
-[ -f /data/adb/oneplus15-vrr-state/vrr.conf ] && . /data/adb/oneplus15-vrr-state/vrr.conf
+OVRR_CONF=/data/adb/oneplus15-vrr-state/vrr.conf
+if [ -f "$OVRR_CONF" ]; then
+  if sh -n "$OVRR_CONF" 2>/dev/null; then
+    . "$OVRR_CONF"
+  else
+    echo "override config $OVRR_CONF has a syntax error; ignored" >> "$LOG"
+  fi
+fi
 log() { [ "$DEBUG" = "1" ] && echo "[$(date '+%m-%d %H:%M:%S')] vrrd: $*" >> "$LOG"; return 0; }
 say() { echo "[$(date '+%m-%d %H:%M:%S')] vrrd: $*" >> "$LOG"; }
 log_trim() {

@@ -47,7 +47,7 @@ class RestoreIntegration(unittest.TestCase):
         source = (MODULE / 'vrrd.sh').read_text().replace(
             'for d in /dev/input/event*; do', f'for d in "{self.dev}"; do')
         (self.d / 'vrrd.sh').write_text(source)
-        (self.d / 'vrr.conf').write_text("IDLE_TIMEOUT=0.1\nKEEP_ACTIVE_CAMERA=0\nKEEP_ACTIVE_PKGS=''\nDEBUG=1\n")
+        (self.d / 'vrr.conf').write_text("IDLE_TIMEOUT=0.1\nACTIVE_MODE=7\nIDLE_MODE=1\nKEEP_ACTIVE_CAMERA=0\nKEEP_ACTIVE_PKGS=''\nDEBUG=1\n")
         for name in ('cmd', 'settings', 'am'):
             p = self.d / 'bin' / name
             p.write_text('#!' + sys.executable + '\n' + MOCK); p.chmod(0o755)

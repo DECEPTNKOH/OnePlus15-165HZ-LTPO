@@ -13,7 +13,14 @@ WIN_OVERRIDE=camera
 CAMERA_165=1
 CAMERA_PKGS=com.oplus.camera
 [ -f "$MODDIR/vrr.conf" ] && . "$MODDIR/vrr.conf"
-[ -f /data/adb/oneplus15-vrr-state/vrr.conf ] && . /data/adb/oneplus15-vrr-state/vrr.conf
+OVRR_CONF=/data/adb/oneplus15-vrr-state/vrr.conf
+if [ -f "$OVRR_CONF" ]; then
+  if sh -n "$OVRR_CONF" 2>/dev/null; then
+    . "$OVRR_CONF"
+  else
+    echo "override config $OVRR_CONF has a syntax error; ignored" >> "$LOG"
+  fi
+fi
 set -f
 case "$FORCE_ALL:$CAMERA_165:$WIN_OVERRIDE" in
   [01]:[01]:camera|[01]:[01]:all|[01]:[01]:off) ;;
@@ -36,6 +43,11 @@ D="$W/result.xml"
 run cp "$SRC" "$S"
 if [ "$FORCE_ALL" = 1 ]; then RULES="$MODDIR/sed/force.sed"; else RULES="$MODDIR/sed/respect.sed"; fi
 run sed -E -f "$RULES" "$S" > "$D"
+if [ "$FORCE_ALL" = 1 ]; then
+  n_items=$(grep -o '<item ' "$D" | wc -l | tr -d ' ')
+  n_high=$(grep -o '<item [^>]*rateId="[0-9]-[0-9]-[0-9]-7"' "$D" | wc -l | tr -d ' ')
+  [ "$n_items" -gt 0 ] && [ "$n_items" = "$n_high" ] || abort "FORCE_ALL: only $n_high/$n_items items carry a 165 Hz rateId"
+fi
 if [ "$WIN_OVERRIDE" = all ]; then
   run sed -i -E -e '/<item/ s/ enableWinOverride="[a-z]+"//' \
     -e '/<item/ s|(<item [^>]*)/>|\1 enableWinOverride="false" />|g' "$D"
